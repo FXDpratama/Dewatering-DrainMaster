@@ -1,0 +1,1224 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>DrainMaster Pro — Dewatering Calculator</title>
+  
+  <!-- POIN 2 (Perbaikan): Tambahkan 'defer' untuk membantu urutan loading -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf-autotable.umd.min.js" defer></script>
+
+  <style>
+    :root {
+      --bg: #f8fafc; /* Latar belakang lebih lembut */
+      --card: #ffffff;
+      --accent: #0284c7; /* Biru yang lebih profesional */
+      --accent-hover: #0369a1;
+      --muted: #64748b;
+      --good: #10b981;
+      --text: #0f172a;
+      --border: #e2e8f0;
+      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    }
+    body {
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 0;
+    }
+    
+    #welcome-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--card);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      transition: opacity 0.5s ease-out, pointer-events 0.5s;
+    }
+    #welcome-screen h1 {
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--accent);
+      margin: 0;
+    }
+    #welcome-screen p {
+      font-size: 16px;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-top: 24px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    header {
+      background: var(--card);
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    header h1 {
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--text);
+      margin: 0;
+    }
+    header button {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--accent);
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    header button:hover {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    @media (min-width: 1024px) {
+      .grid {
+        grid-template-columns: 420px 1fr;
+        gap: 24px;
+      }
+    }
+
+    .card {
+      background: var(--card);
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+    }
+    .card h2 {
+      font-size: 18px;
+      margin: 0 0 16px 0;
+      font-weight: 600;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .card h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--accent);
+      margin-top: 24px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 8px;
+    }
+    
+    label {display: block; font-size: 14px; color: var(--muted); margin-bottom: 6px; font-weight: 500;}
+    input[type=number], input[type=text], select {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 16px;
+      box-sizing: border-box;
+      transition: all 0.2s;
+    }
+    input[type=number]:focus, input[type=text]:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+    }
+    input[type=number].zero-value {color: #94a3b8; font-style: italic;}
+    
+    .row {display: flex; gap: 12px; flex-wrap: wrap;}
+    .half {flex: 1; min-width: calc(50% - 6px);}
+    
+    button#calcBtn {
+      background: var(--accent);
+      border: none;
+      padding: 14px 20px;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 16px;
+      width: 100%;
+      transition: background-color 0.2s;
+    }
+    button#calcBtn:hover {background: var(--accent-hover);}
+    button#resetBtn {
+      background: #e2e8f0;
+      color: var(--muted);
+      border: none;
+      padding: 14px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 16px;
+      width: 100%;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    button#resetBtn:hover {background: #cbd5e1;}
+    #exportBtn {
+      background: var(--good);
+      border: none;
+      padding: 12px 16px;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 15px;
+      margin-top: 20px;
+      transition: background-color 0.2s;
+    }
+    #exportBtn:hover {background: #059669;}
+
+    table {width: 100%; border-collapse: collapse; margin: 0;}
+    th, td {
+      padding: 12px 10px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      font-size: 14px;
+      vertical-align: middle;
+    }
+    th {background: var(--bg); font-weight: 600; color: var(--text);}
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background-color: #f8fafc; }
+    
+    .small {font-size: 13px; color: var(--muted);}
+    .good {color: var(--good); font-weight: 600;}
+    .warn {color: #f59e0b; font-weight: 600;}
+    .danger {color: #ef4444; font-weight: 600;}
+    
+    .status-badge {
+      padding: 4px 10px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+      white-space: nowrap;
+      display: inline-block;
+    }
+    .status-optimal { background-color: #3b82f6; color: white; }
+    .status-recommended { background-color: #10b981; color: white; }
+    .status-danger { background-color: #ef4444; color: white; }
+    .status-warn { background-color: #f59e0b; color: white; }
+    .status-default { background-color: #e2e8f0; color: #475569; }
+
+    .highlight-box {
+      background: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 16px;
+      margin: 12px 0;
+      border-radius: 4px;
+    }
+    .highlight-box h3 {
+        margin: 0 0 8px 0; 
+        border: none; 
+        padding: 0; 
+        font-size: 16px; 
+        color: #1e40af;
+    }
+
+    .config-section {
+      margin-top: 24px;
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+    }
+    .config-section h4 {
+        font-size: 15px;
+        font-weight: 600;
+        margin: 16px 0 8px;
+        color: #334155;
+    }
+    
+    .table-wrapper {
+        width: 100%;
+        overflow-x: auto;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        margin-top: 12px;
+        box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    }
+
+    .footer {margin-top: 16px; color: var(--muted); font-size: 13px; text-align: center;}
+    .hidden { display: none; opacity: 0; }
+    .invisible { opacity: 0; visibility: hidden; }
+
+    #helpModal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(9, 30, 66, 0.54);
+      z-index: 100;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s, visibility 0.3s;
+    }
+    #helpModal.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+    .modal-content {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 24px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+      transform: scale(0.95);
+      transition: transform 0.3s;
+    }
+    #helpModal.visible .modal-content {
+      transform: scale(1);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+      margin-bottom: 16px;
+    }
+    .modal-header h2 {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0;
+    }
+    #closeHelpBtn {
+      background: #f1f5f9;
+      color: var(--muted);
+      border: none;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      font-size: 20px;
+      font-weight: 600;
+      cursor: pointer;
+      line-height: 30px;
+    }
+    .modal-content h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--accent);
+      margin-top: 16px;
+      margin-bottom: 8px;
+    }
+    .modal-content p, .modal-content li {
+      font-size: 15px;
+      color: var(--text);
+      line-height: 1.6;
+    }
+    .modal-content ul {
+      padding-left: 20px;
+    }
+
+    @media (max-width: 768px) {
+      header {
+        padding: 12px 16px;
+      }
+      header h1 {
+        font-size: 18px;
+      }
+      .wrap {
+        padding: 12px;
+      }
+      .grid {
+        margin-top: 12px;
+      }
+      .card {
+        padding: 16px;
+      }
+      .card h2 {
+        font-size: 17px;
+        margin-bottom: 12px;
+      }
+      .row {
+        flex-direction: column;
+        gap: 0;
+      }
+      .half {
+        min-width: 100%;
+        margin-bottom: 12px;
+      }
+      th, td {
+        padding: 10px 8px;
+        font-size: 13px;
+      }
+      .modal-content {
+        width: 95%;
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="welcome-screen">
+    <h1>DrainMaster</h1>
+    <p>Dewatering Calculator Pro</p>
+    <div class="spinner"></div>
+  </div>
+
+  <div id="helpModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Panduan Pengguna</h2>
+        <button id="closeHelpBtn" title="Tutup">&times;</button>
+      </div>
+      <h3>Tujuan Aplikasi</h3>
+      <p>DrainMaster Pro adalah alat bantu kalkulasi teknis untuk merencanakan sistem dewatering (pengeringan) pada area tambang atau konstruksi. Aplikasi ini membantu engineer menentukan jumlah pompa optimal dan ukuran pipa yang aman dan efisien.</p>
+      
+      <h3>Cara Penggunaan</h3>
+      <ol>
+        <li><strong>Isi Input Data:</strong> Masukkan semua parameter lapangan pada form di sebelah kiri, dimulai dari "Nama Sump/Area", "Luas Sump", "Target Waktu", "Static Head", "PN Pipa", "NPSHr", dan data lainnya.</li>
+        <li><strong>Planning Pompa (Opsional):</strong> Jika Anda sudah memiliki rencana pompa, masukkan jumlah unit dan flow per unit. Aplikasi akan menganalisis rencana Anda.</li>
+        <li><strong>Hitung:</strong> Tekan tombol "Hitung" untuk memproses data.</li>
+        <li><strong>Lihat Hasil:</strong>
+          <ul>
+            <li><strong>Rekomendasi Optimal:</strong> Box biru akan menunjukkan konfigurasi (jumlah pompa & ukuran pipa) yang paling efisien dan aman.</li>
+            <li><strong>Analisis Planning:</strong> Jika Anda mengisi planning, box kuning/hijau akan menunjukkan performa rencana Anda.</li>
+            <li><strong>Ringkasan:</strong> Tabel ini berisi data dasar perhitungan seperti total flow dan status NPSH.</li>
+            <li><strong>Detail Rekomendasi:</strong> Tabel ini membandingkan semua ukuran pipa untuk konfigurasi yang direkomendasikan, termasuk status velocity dan tekanan (Bar).</li>
+          </ul>
+        </li>
+        <li><strong>Ekspor PDF:</strong> Tekan "Ekspor ke PDF" untuk menyimpan laporan teknis profesional dari hasil perhitungan.</li>
+      </ol>
+      
+      <h3>Catatan Teknis Penting</h3>
+      <ul>
+        <li><strong>Pressure Unsafe:</strong> Status ini muncul jika tekanan sistem (TDH) melebihi "PN Pipa" yang Anda masukkan. Pipa ini tidak boleh digunakan.</li>
+        <li><strong>NPSH:</strong> Pastikan status NPSH "AMAN". Jika "RISIKO" atau "BAHAYA KAVITASI", pompa Anda berisiko rusak. Solusi: turunkan "Suction hose level" atau ganti pompa dengan NPSHr lebih rendah.</li>
+      </ul>
+    </div>
+  </div>
+
+  <header>
+    <h1>DrainMaster Pro</h1>
+    <button id="helpBtn">? Panduan</button>
+  </header>
+
+  <div class="wrap">
+    <div class="grid">
+      <!-- Kolom Input -->
+      <div class="card">
+        <h2>Input Data</h2>
+
+        <label>Nama Sump / Area</label>
+        <input id="sumpName" type="text" value="Sump Utama">
+
+        <label style="margin-top:12px;">Luas sump (m²)</label>
+        <input id="areaSump" type="number" value="0" min="0">
+
+        <div class="row" style="margin-top:12px">
+          <div class="half">
+            <label>RL permukaan awal (m)</label>
+            <input id="rlStart" type="number" value="0">
+          </div>
+          <div class="half">
+            <label>RL target (m)</label>
+            <input id="rlTarget" type="number" value="0">
+          </div>
+        </div>
+
+        <label style="margin-top:12px">Water inflow dasar (m³/jam)</label>
+        <input id="inflowBase" type="number" value="0">
+
+        <div class="row" style="margin-top:12px">
+          <div class="half">
+            <label>Target waktu (hari)</label>
+            <input id="targetDays" type="number" value="0" min="0">
+          </div>
+          <div class="half">
+            <label>Panjang pipa per unit (m)</label>
+            <input id="pipeLength" type="number" value="0">
+          </div>
+        </div>
+
+        <label style="margin-top:12px">Static head (m)</label>
+        <input id="staticHead" type="number" value="0">
+
+        <h3>Planning Pompa (Opsional)</h3>
+        <label>Jumlah unit pompa planning (0-10)</label>
+        <input id="planningPumpCount" type="number" value="0" min="0" max="10">
+        <div id="planningPumpInputs" style="display:none;margin-top:8px">
+          <!-- Dynamic inputs will be inserted here -->
+        </div>
+
+        <h3>Hydrologi / Hujan</h3>
+        <div class="row" style="margin-top:12px">
+          <div class="half">
+            <label>Intensitas hujan (mm/jam)</label>
+            <input id="rainIntensity" type="number" value="0">
+          </div>
+          <div class="half">
+            <label>Catchment area (m²)</label>
+            <input id="catchmentArea" type="number" value="0">
+          </div>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <div class="half">
+            <label>Runoff coefficient (0-1)</label>
+            <input id="runoffCoeff" type="number" value="0.8" step="0.01" min="0" max="1">
+          </div>
+          <div class="half">
+            <label>Include direct rainfall?</label>
+            <select id="includeDirect">
+              <option value="1" selected>Ya</option>
+              <option value="0">Tidak</option>
+            </select>
+          </div>
+        </div>
+
+        <h3>Pipa & Efisiensi</h3>
+        <label>Jenis Material Pipa</label>
+        <select id="material">
+          <option value="150" selected>HDPE (C=150)</option>
+          <option value="150">PVC (C=150)</option>
+          <option value="120">Steel (C=120)</option>
+          <option value="100">Cast Iron (C=100)</option>
+          <option value="140">Lainnya (C=140)</option>
+        </select>
+        
+        <label style="margin-top:12px">PN Pipa (Pressure Nominal, Bar)</label>
+        <input id="pnPipa" type="number" value="10" min="0">
+
+        <div class="row" style="margin-top:12px">
+          <div class="half">
+            <label>Efisiensi gabungan (%)</label>
+            <input id="eff" type="number" value="70" min="10" max="95">
+          </div>
+          <div class="half">
+            <label>Jumlah Elbow (90°)</label>
+            <input id="numElbow" type="number" value="0" min="0">
+          </div>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <div class="half">
+            <label>Jumlah Tee</label>
+            <input id="numTee" type="number" value="0" min="0">
+          </div>
+          <div class="half">
+            <label>Jumlah NRV</label>
+            <input id="numNRV" type="number" value="0" min="0">
+          </div>
+        </div>
+
+        <h3>NPSH Data</h3>
+        <div class="row" style="margin-top:12px">
+          <div class="half">
+            <label>Suction hose level (m)</label>
+            <input id="suctionLevel" type="number" value="0" min="0">
+          </div>
+          <div class="half">
+            <label>Temperatur air (°C)</label>
+            <input id="waterTemp" type="number" value="25" min="0" max="100">
+          </div>
+        </div>
+        <label style="margin-top:12px">NPSHr Pompa (m) - Required</label>
+        <input id="npshr" type="number" value="0" min="0">
+
+        <div class="row" style="margin-top:24px; gap: 12px;">
+          <div class="half" style="margin-bottom: 0;">
+             <button id="calcBtn">Hitung</button>
+          </div>
+           <div class="half" style="margin-bottom: 0;">
+             <button id="resetBtn" type="button">Reset</button>
+           </div>
+        </div>
+      </div>
+
+      <!-- Kolom Hasil -->
+      <div class="card" id="outputCard">
+        <h2>Hasil & Rekomendasi</h2>
+        <div id="summaryArea">
+          <p class="small">Tekan <strong>Hitung</strong> untuk melihat hasil.</p>
+        </div>
+      </div>
+    </div>
+    <p class="footer">DrainMaster Pro v9 — Perhitungan mencakup validasi NPSH dan Tekanan Pipa (PN) untuk rekomendasi yang aman dan efisien.</p>
+  </div>
+  
+  <script>
+    // --- Logika Inti (Tidak Berubah) ---
+    const pipes = [
+      {name: '6"', D: 0.1524}, {name: '8"', D: 0.2032}, {name: '10"', D: 0.254},
+      {name: '12"', D: 0.3048}, {name: '14"', D: 0.3556}, {name: '16"', D: 0.4064},
+      {name: '18"', D: 0.4572}, {name: '20"', D: 0.5080}
+    ];
+    function mmToM3PerHour(mmPerHour, area_m2){ return mmPerHour * area_m2 * 0.001; }
+    function hazenWilliams(L,Q,D,C){
+      if(Q<=0) return 0;
+      return 10.67 * L * Math.pow(Q,1.852) / (Math.pow(C,1.852) * Math.pow(D,4.87));
+    }
+    function calculateMinorLoss(Q, D, numElbow, numTee, numNRV) {
+      const A = Math.PI * Math.pow(D/2, 2);
+      if(A <= 0 || Q <= 0) return 0;
+      const v = Q / A;
+      const g = 9.81;
+      const K_elbow = 0.9, K_tee = 1.0, K_nrv = 2.5;
+      const totalK = (numElbow * K_elbow) + (numTee * K_tee) + (numNRV * K_nrv);
+      return totalK * (Math.pow(v, 2) / (2 * g));
+    }
+    function vaporPressure(tempC) { return 0.6108 * Math.exp(17.27 * tempC / (tempC + 237.3)); }
+    function calculateNPSHa(suctionLevel, tempC) {
+      const atmHead = 10.33;
+      const pv = vaporPressure(tempC);
+      const vaporHead = (pv * 1000) / (9.81 * 1000);
+      return atmHead - suctionLevel - vaporHead;
+    }
+    function format(n, dp=2){ return Number(n).toLocaleString('id-ID',{maximumFractionDigits:dp,minimumFractionDigits:dp}); }
+
+    // --- Logika UI & Event Listeners ---
+    document.addEventListener('DOMContentLoaded', () => {
+      // Perbaikan Welcome Screen
+      setTimeout(() => {
+        const welcome = document.getElementById('welcome-screen');
+        welcome.style.opacity = '0';
+        welcome.style.pointerEvents = 'none';
+        setTimeout(() => {
+            welcome.style.display = 'none';
+        }, 500); 
+      }, 2000); 
+
+      // Attach listener input
+      attachInputListeners();
+      
+      // Attach listener modal
+      const helpBtn = document.getElementById('helpBtn');
+      const closeHelpBtn = document.getElementById('closeHelpBtn');
+      const helpModal = document.getElementById('helpModal');
+      
+      if(helpBtn && closeHelpBtn && helpModal) {
+        helpBtn.addEventListener('click', () => helpModal.classList.add('visible'));
+        closeHelpBtn.addEventListener('click', () => helpModal.classList.remove('visible'));
+        helpModal.addEventListener('click', (e) => {
+          if (e.target === helpModal) helpModal.classList.remove('visible');
+        });
+      } else {
+        console.error("Elemen modal bantuan tidak ditemukan!");
+      }
+    });
+
+    function handleZeroInput(e) {
+      if (e.type === 'focus') {
+        if (e.target.value === '0') e.target.value = '';
+        e.target.classList.remove('zero-value');
+      } else if (e.type === 'blur') {
+        if (e.target.value === '') e.target.value = '0';
+        if (e.target.value === '0') e.target.classList.add('zero-value');
+      }
+    }
+    function attachInputListeners() {
+      document.querySelectorAll('input[type=number], input[type=text]').forEach(input => {
+        input.removeEventListener('focus', handleZeroInput);
+        input.removeEventListener('blur', handleZeroInput);
+        if (input.type === 'number') {
+            input.addEventListener('focus', handleZeroInput);
+            input.addEventListener('blur', handleZeroInput);
+            if (input.value === '0') input.classList.add('zero-value');
+        }
+        if (input.type === 'text' && input.value === '0') {
+            input.classList.remove('zero-value');
+        }
+      });
+    }
+
+    document.getElementById('planningPumpCount').addEventListener('input', (e) => {
+      const count = parseInt(e.target.value) || 0;
+      const container = document.getElementById('planningPumpInputs');
+      if(count > 0 && count <= 10) {
+        container.style.display = 'block';
+        let html = '';
+        for(let i = 1; i <= count; i++) {
+          html += `<div class="row" style="margin-bottom:8px"><div class="half"><label>Pompa ${i} - Flow (m³/jam)</label><input id="planningFlow${i}" type="number" value="0" min="0" step="0.1"></div></div>`;
+        }
+        container.innerHTML = html;
+        attachInputListeners();
+      } else {
+        container.style.display = 'none';
+        container.innerHTML = '';
+      }
+    });
+
+    // --- Fungsi Evaluasi Pipa (Inti) ---
+    function evaluatePipeOptions(q_m3s, pipeL, staticHead, hwC, numElbow, numTee, numNRV, effPct, pnPipa_bar) {
+      return pipes.map(pipe => {
+        const A = Math.PI * Math.pow(pipe.D/2, 2);
+        const velocity = A > 0 ? q_m3s / A : 0;
+        const hf = hazenWilliams(pipeL, q_m3s, pipe.D, hwC);
+        const minor = calculateMinorLoss(q_m3s, pipe.D, numElbow, numTee, numNRV);
+        const tdhBase = staticHead + hf + minor;
+        const safetyHead = tdhBase * 0.10;
+        const TDH = tdhBase + safetyHead;
+        
+        const pressure_bar = TDH / 10.197;
+        const isPressureSafe = pressure_bar <= pnPipa_bar;
+
+        const rho = 1000, g = 9.81;
+        const powerKW = (rho * g * q_m3s * TDH) / (effPct/100) / 1000;
+
+        const velOptimal = velocity >= 1.5 && velocity <= 2.5;
+        const velAcceptable = velocity >= 1.0 && velocity <= 3.0;
+        const hfOptimal = hf <= 0.15 * staticHead;
+        const hfAcceptable = hf <= 0.25 * staticHead;
+        
+        const isOptimal = velOptimal && hfOptimal && isPressureSafe;
+        const isAcceptable = velAcceptable && hfAcceptable && isPressureSafe;
+
+        let status = 'Not Recommended';
+        let statusClass = 'status-default';
+        if (!isPressureSafe) {
+          status = 'PRESSURE UNSAFE';
+          statusClass = 'status-danger';
+        } else if (isOptimal) {
+          status = 'OPTIMAL';
+          statusClass = 'status-optimal';
+        } else if (isAcceptable) {
+          status = 'Acceptable';
+          statusClass = 'status-recommended';
+        } else if (!velAcceptable) {
+            status = 'Bad Velocity';
+            statusClass = 'status-warn';
+        }
+
+        return {
+          pipeName: pipe.name, velocity, hf, minor, TDH, pressure_bar,
+          powerKW, // Perhatikan: ini adalah power per unit
+          status, statusClass, isOptimal, isAcceptable, isPressureSafe,
+          score: isPressureSafe ? (isOptimal ? 100 : (isAcceptable ? 50 : 0)) : -100
+        };
+      });
+    }
+
+    // --- Tombol Kalkulasi Utama ---
+    document.getElementById('calcBtn').addEventListener('click', ()=>{
+      // ... (Ambil semua nilai input - sama seperti v8) ...
+      const area = parseFloat(document.getElementById('areaSump').value) || 0;
+      const rlStart = parseFloat(document.getElementById('rlStart').value) || 0;
+      const rlTarget = parseFloat(document.getElementById('rlTarget').value) || 0;
+      const inflowBase = parseFloat(document.getElementById('inflowBase').value) || 0;
+      const targetDays = parseFloat(document.getElementById('targetDays').value) || 0;
+      const pipeL = parseFloat(document.getElementById('pipeLength').value) || 0;
+      const staticHead = parseFloat(document.getElementById('staticHead').value) || 0;
+      const I = parseFloat(document.getElementById('rainIntensity').value) || 0;
+      const catchA = parseFloat(document.getElementById('catchmentArea').value) || 0;
+      const Crun = parseFloat(document.getElementById('runoffCoeff').value) || 0.8;
+      const includeDirect = document.getElementById('includeDirect').value === '1';
+      const hwC = parseFloat(document.getElementById('material').value) || 140;
+      const effPct = parseFloat(document.getElementById('eff').value) || 70;
+      const numElbow = parseFloat(document.getElementById('numElbow').value) || 0;
+      const numTee = parseFloat(document.getElementById('numTee').value) || 0;
+      const numNRV = parseFloat(document.getElementById('numNRV').value) || 0;
+      const suctionLevel = parseFloat(document.getElementById('suctionLevel').value) || 0;
+      const waterTemp = parseFloat(document.getElementById('waterTemp').value) || 25;
+      const npshr_req = parseFloat(document.getElementById('npshr').value) || 0;
+      const pnPipa_bar = parseFloat(document.getElementById('pnPipa').value) || 10;
+      const sumpName = document.getElementById('sumpName').value || 'Area Tidak Bernama';
+
+      const planningPumpCount = parseInt(document.getElementById('planningPumpCount').value) || 0;
+      const planningPumps = [];
+      if(planningPumpCount > 0) {
+        for(let i = 1; i <= planningPumpCount; i++) {
+          const flowInput = document.getElementById(`planningFlow${i}`);
+          if(flowInput) {
+            const flow = parseFloat(flowInput.value) || 0;
+            planningPumps.push({ id: i, flow_m3h: flow });
+          }
+        }
+      }
+      
+      const out = document.getElementById('summaryArea');
+      const deltaH = Math.max(0, rlStart - rlTarget);
+      const volToRemove = area * deltaH;
+
+      if (targetDays <= 0 && volToRemove > 0) {
+        out.innerHTML = `<p class="danger">Error: Target waktu (hari) harus lebih besar dari 0 jika ada volume yang perlu dikuras.</p>`;
+        return;
+      }
+      if (pnPipa_bar <= 0) {
+         out.innerHTML = `<p class="danger">Error: PN Pipa harus lebih besar dari 0.</p>`;
+         return;
+      }
+
+      // --- 1. PERHITUNGAN DASAR ---
+      const hours = targetDays > 0 ? targetDays * 24 : Infinity;
+      const netRemovalRate = (volToRemove > 0 && hours === Infinity) ? 0 : (volToRemove / hours);
+      const qRunoff = mmToM3PerHour(I, catchA) * Crun;
+      const qDirect = includeDirect ? mmToM3PerHour(I, area) : 0;
+      const qRainTotal = qRunoff + qDirect;
+      const inflowTotal = inflowBase + qRainTotal;
+      const qPumpTotal_m3h = inflowTotal + netRemovalRate;
+      const qPumpTotal_m3s = qPumpTotal_m3h / 3600;
+      const npsha_avail = calculateNPSHa(suctionLevel, waterTemp);
+      const npshMargin = npsha_avail - npshr_req;
+      const npshStatus = npshMargin > 0.5 ? 'AMAN' : (npshMargin >= 0 ? 'RISIKO' : 'BAHAYA KAVITASI');
+      const npshClass = npshMargin > 0.5 ? 'good' : (npshMargin >= 0 ? 'warn' : 'danger');
+
+      // --- 2. ANALISIS PLANNING POMPA ---
+      let planningAnalysis = null;
+      if(planningPumps.length > 0) {
+        // ... (Logika planning - sama seperti v8) ...
+        const totalPlanningFlow = planningPumps.reduce((sum, p) => sum + p.flow_m3h, 0);
+        let timeToComplete = 'N/A', timeComparison = '', planningStatus = 'danger';
+        
+        if (totalPlanningFlow <= inflowTotal) {
+            timeToComplete = 'Tidak dapat menguras (flow ≤ inflow)';
+        } else {
+            const netRemovalPlanning = totalPlanningFlow - inflowTotal;
+            if (volToRemove === 0) {
+                timeToComplete = '0 hari (tidak ada vol. kuras)';
+                planningStatus = 'good';
+            } else {
+                const daysNeeded = (volToRemove / netRemovalPlanning) / 24;
+                timeToComplete = `${format(daysNeeded, 2)} hari`;
+                const timeDiff = targetDays - daysNeeded;
+                if(Math.abs(timeDiff) < 0.5 || targetDays === 0) {
+                  planningStatus = 'good';
+                } else if(timeDiff > 0) {
+                  planningStatus = 'good'; timeComparison = ` (lebih cepat ${format(timeDiff,1)} hari)`;
+                } else {
+                  planningStatus = 'warn'; timeComparison = ` (lebih lambat ${format(-timeDiff,1)} hari)`;
+                }
+            }
+        }
+        const planningPumpDetails = planningPumps.map(pump => {
+          const q_m3s = pump.flow_m3h / 3600;
+          const pipeEvals = evaluatePipeOptions(q_m3s, pipeL, staticHead, hwC, numElbow, numTee, numNRV, effPct, pnPipa_bar);
+          pipeEvals.sort((a,b) => (b.score - a.score) || (a.powerKW - b.powerKW));
+          return {...pump, pipeEvals, recommendedPipe: pipeEvals[0]};
+        });
+        const hasUnsafePlanningPipe = planningPumpDetails.some(p => !p.recommendedPipe.isPressureSafe);
+        if (hasUnsafePlanningPipe) planningStatus = 'danger';
+        const totalPlanningPower = planningPumpDetails.reduce((sum, p) => sum + p.recommendedPipe.powerKW, 0);
+
+        planningAnalysis = {
+          totalFlow: totalPlanningFlow, timeToComplete, timeComparison, planningStatus,
+          pumpDetails: planningPumpDetails, totalPower: totalPlanningPower, hasUnsafePipe: hasUnsafePlanningPipe
+        };
+      }
+
+      // --- 3. ANALISIS REKOMENDASI SISTEM ---
+      const pumpConfigs = [];
+      if (qPumpTotal_m3h > 0) {
+        for(let numPumps = 1; numPumps <= 6; numPumps++){
+          const qPerPump_m3s = qPumpTotal_m3s / numPumps;
+          const pipeResults = evaluatePipeOptions(qPerPump_m3s, pipeL, staticHead, hwC, numElbow, numTee, numNRV, effPct, pnPipa_bar);
+          pipeResults.sort((a,b) => (b.score - a.score) || (a.powerKW - b.powerKW)); // Sort by score, then *unit* power
+          const bestPipe = pipeResults[0];
+          
+          pumpConfigs.push({
+            numPumps, qPerPump_m3h: qPerPump_m3s * 3600, qPerPump_m3s,
+            pipeResults, bestPipe, recommendedPipe: bestPipe.pipeName,
+            totalPower: bestPipe.powerKW * numPumps // Kalkulasi total power untuk config
+          });
+        }
+      }
+
+      let bestOverall = null;
+      if(pumpConfigs.length > 0) {
+        // ... (Logika pemilihan bestOverall - sama seperti v8) ...
+        const optimalConfigs = pumpConfigs.filter(c => c.bestPipe.isOptimal);
+        const acceptableConfigs = pumpConfigs.filter(c => c.bestPipe.isAcceptable);
+        if (optimalConfigs.length > 0) {
+          bestOverall = optimalConfigs.reduce((a,b) => a.totalPower < b.totalPower ? a : b);
+        } else if (acceptableConfigs.length > 0) {
+           bestOverall = acceptableConfigs.reduce((a,b) => a.totalPower < b.totalPower ? a : b);
+        } else {
+          bestOverall = pumpConfigs[0];
+        }
+      }
+      
+      // --- 4. RENDER HTML OUTPUT ---
+      let html = ``;
+      // ... (Box Rekomendasi - sama seperti v8) ...
+      if(qPumpTotal_m3h > 0 && (bestOverall === null || bestOverall.bestPipe.score < 0)) {
+         html += `<div class="highlight-box" style="border-left-color:#ef4444;background:#fef2f2">
+            <h3 style="color:#991b1b">❌ PERINGATAN (Rekomendasi Sistem)</h3>
+            <p style="margin:0;font-size:15px;"><strong>Tidak ditemukan konfigurasi pipa yang aman untuk target Anda.</strong></p>
+            <p style="margin:4px 0 0;font-size:13px;color:#b91c1c">Semua opsi pipa menghasilkan tekanan (TDH) melebihi batas PN Pipa ${format(pnPipa_bar,1)} Bar. Harap sesuaikan input (PN Pipa, Jarak, Static Head) atau tambah jumlah unit pompa.</p>
+          </div>`;
+      } else if (qPumpTotal_m3h <= 0) {
+         html += `<div class="highlight-box" style="border-left-color:#10b981;background:#f0fdf4">
+            <h3 style="color:#065f46">✅ Target Terpenuhi</h3>
+            <p style="margin:0;font-size:15px;"><strong>Total flow dibutuhkan 0 m³/jam.</strong></p>
+            <p style="margin:4px 0 0;font-size:13px;color:#065f46">Tidak ada pompa yang dibutuhkan berdasarkan input saat ini.</p>
+          </div>`;
+      }
+      else {
+        html += `<div class="highlight-box">
+            <h3>🎯 Rekomendasi Optimal (Perhitungan Sistem)</h3>
+            <p style="margin:0;font-size:15px;"><strong>${bestOverall.numPumps} unit pompa</strong> dengan pipa <strong>${bestOverall.recommendedPipe}</strong> per unit</p>
+            <p style="margin:4px 0 0;font-size:13px;color:#64748b">Flow per pompa: ${format(bestOverall.qPerPump_m3h,1)} m³/jam | Power total: ${format(bestOverall.totalPower,1)} kW</p>
+            <p style="margin:4px 0 0;font-size:13px;color:#64748b">Pressure: <strong>${format(bestOverall.bestPipe.pressure_bar, 2)} Bar</strong> (Batas Aman: ${format(pnPipa_bar,1)} Bar)</p>
+          </div>`;
+      }
+      
+      // ... (Box Planning & Perbandingan - sama seperti v8) ...
+      if(planningAnalysis) {
+        const statusColor = planningAnalysis.planningStatus === 'good' ? '#10b981' : (planningAnalysis.planningStatus === 'warn' ? '#f59e0b' : '#ef4444');
+        const bgColor = planningAnalysis.planningStatus === 'good' ? '#f0fdf4' : (planningAnalysis.planningStatus === 'warn' ? '#fefce8' : '#fef2f2');
+        html += `<div class="highlight-box" style="border-left-color:${statusColor};background:${bgColor};">
+            <h3 style="color:${statusColor}">📋 Analisis Planning Pompa Anda</h3>
+            <p style="margin:0;font-size:15px;"><strong>${planningAnalysis.pumpDetails.length} unit pompa</strong> | Total flow <strong>${format(planningAnalysis.totalFlow,1)} m³/jam</strong></p>
+            <p style="margin:4px 0 0;font-size:13px;color:#64748b">Waktu estimasi: <span class="${planningAnalysis.planningStatus}">${planningAnalysis.timeToComplete}</span>${planningAnalysis.timeComparison}</p>
+            <p style="margin:4px 0 0;font-size:13px;color:#64748b">Total power: ${format(planningAnalysis.totalPower,1)} kW</p>
+            ${planningAnalysis.hasUnsafePipe ? `<p style="margin:8px 0 0;font-size:13px;" class="danger"><strong>PERINGATAN: Satu atau lebih pipa rekomendasi planning Anda TIDAK AMAN (melebihi PN Pipa).</strong></p>` : ''}
+          </div>`;
+        
+        if (bestOverall && bestOverall.bestPipe.score >= 0) {
+            html += `<div class="highlight-box" style="background:#fefce8;border-left-color:#f59e0b">
+              <h4 style="margin:0 0 8px 0;font-size:16px;color:#92400e; border:none; padding:0;">⚖️ Perbandingan: Planning vs Rekomendasi Sistem</h4>
+              <div class="table-wrapper">
+              <table id="compareTable" style="margin:0; background:transparent;">
+                <thead><tr>
+                  <th style="background:transparent">Parameter</th>
+                  <th style="background:transparent">Planning Anda</th>
+                  <th style="background:transparent">Rekomendasi Sistem</th>
+                </tr></thead>
+                <tbody>
+                  <tr><td>Jumlah Pompa</td><td>${planningAnalysis.pumpDetails.length} unit</td><td>${bestOverall.numPumps} unit</td></tr>
+                  <tr><td>Total Flow</td><td>${format(planningAnalysis.totalFlow,1)} m³/jam</td><td>${format(qPumpTotal_m3h,1)} m³/jam</td></tr>
+                  <tr><td>Waktu Penyelesaian</td><td class="${planningAnalysis.planningStatus}">${planningAnalysis.timeToComplete}</td><td>${(targetDays > 0 ? format(targetDays,1) : 'N/A')} hari (target)</td></tr>
+                  <tr><td>Total Power</td><td>${format(planningAnalysis.totalPower,1)} kW</td><td>${format(bestOverall.totalPower,1)} kW</td></tr>
+                </tbody>
+              </table>
+              </div>
+            </div>`;
+        }
+      }
+
+      // ... (Tabel Ringkasan - sama seperti v8) ...
+      html += `
+        <h3 style="font-size: 18px; margin-top:24px; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">Ringkasan Perhitungan</h3>
+        <div class="table-wrapper">
+        <table id="summaryTable">
+          <tbody>
+            <tr><td>Nama Sump / Area</td><td><strong>${sumpName}</strong></td></tr>
+            <tr><td>Volume harus dikuras</td><td>${format(volToRemove,2)} m³</td></tr>
+            <tr><td>Net removal rate</td><td>${format(netRemovalRate,2)} m³/jam</td></tr>
+            <tr><td>Total inflow (Base + Hujan)</td><td>${format(inflowTotal,2)} m³/jam</td></tr>
+            <tr><td><strong>Flow pompa total dibutuhkan</strong></td><td class="good"><strong>${format(qPumpTotal_m3h,2)} m³/jam</strong></td></tr>
+            <tr><td>Static head</td><td>${format(staticHead,2)} m</td></tr>
+            <tr><td>PN Pipa (Input)</td><td>${format(pnPipa_bar,1)} Bar</td></tr>
+            <tr><td>NPSHa (available)</td><td>${format(npsha_avail,2)} m</td></tr>
+            <tr><td>NPSHr (required)</td><td>${format(npshr_req,2)} m</td></tr>
+            <tr><td><strong>NPSH Status (Margin)</strong></td><td><strong class="${npshClass}">${npshStatus} (${format(npshMargin, 2)} m)</strong></td></tr>
+          </tbody>
+        </table>
+        </div>
+      `;
+
+      // --- Detail Rekomendasi ---
+      if (bestOverall && bestOverall.bestPipe.score >= 0) {
+        const cfg = bestOverall; // Ini adalah konfigurasi terbaik (misal: 2 unit pompa)
+        html += `<h3 style="font-size: 18px; margin-top:24px; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">Detail Rekomendasi Sistem</h3>`;
+        html += `<div class="config-section" style="border:none; padding:0; margin:0;">
+            <h4 style="margin:0 0 8px 0; padding:0;">
+              ${cfg.numPumps} Unit Pompa <span class="status-badge status-optimal">REKOMENDASI</span>
+            </h4>
+            <p class="small" style="margin-bottom:12px">Flow per unit: ${format(cfg.qPerPump_m3h,1)} m³/jam | Total power sistem: ${format(cfg.totalPower,1)} kW</p>
+            <div class="table-wrapper">
+            <table id="recommendationDetailTable">
+              <thead><tr>
+                <th>Ukuran Pipa</th>
+                <th>Status</th>
+                <th>Velocity (m/s)</th>
+                <th>Pressure (Bar)</th>
+                <th>TDH (m)</th>
+                <th>Power/unit (kW)</th>
+                <th>Total Power (kW)</th> <!-- Ini kolom yang bermasalah -->
+              </tr></thead>
+              <tbody>
+        `;
+        cfg.pipeResults.forEach(p => { // `p` adalah hasil evaluasi pipa (6", 8", dst)
+          const velClass = (p.velocity > 3 || p.velocity < 1) && p.isPressureSafe ? 'warn' : '';
+          const pressClass = p.isPressureSafe ? '' : 'danger';
+          
+          // POIN 1 (PERBAIKAN): Kalkulasi 'totalPowerForThisPipe' di sini
+          // `p.powerKW` adalah power per unit. `cfg.numPumps` adalah jumlah unit.
+          const totalPowerForThisPipe = p.powerKW * cfg.numPumps;
+
+          html += `
+            <tr ${p === cfg.bestPipe ? 'style="background:#f0fdf4"' : ''}>
+              <td><strong>${p.pipeName}</strong></td>
+              <td><span class="status-badge ${p.statusClass}">${p.status}</span></td>
+              <td class="${velClass}">${format(p.velocity,2)}</td>
+              <td class="${pressClass}"><strong>${format(p.pressure_bar,2)}</strong></td>
+              <td>${format(p.TDH,2)}</td>
+              <td>${format(p.powerKW,1)}</td>
+              <td><strong>${format(totalPowerForThisPipe,1)}</strong></td> <!-- Gunakan hasil kalkulasi -->
+            </tr>`;
+        });
+        html += `</tbody></table></div></div>`;
+      }
+      
+      // ... (Detail Planning - sama seperti v8) ...
+      if(planningAnalysis) {
+        html += `<h3 style="font-size: 18px; margin-top:24px; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">Detail Planning Pompa</h3>`;
+        planningAnalysis.pumpDetails.forEach(pump => {
+          html += `
+            <div class="config-section" style="border:none; padding:0; margin:0 0 24px 0;">
+            <h4 style="margin:0 0 8px 0;">
+              Pompa ${pump.id} - Flow: ${format(pump.flow_m3h,1)} m³/jam
+              <span style="font-weight:normal;color:#64748b"> | Rekomendasi: <span class="status-badge ${pump.recommendedPipe.statusClass}">${pump.recommendedPipe.pipeName}</span></span>
+            </h4>
+            <div class="table-wrapper">
+            <table id="planningDetailTable_${pump.id}">
+              <thead><tr>
+                <th>Pipa</th>
+                <th>Status</th>
+                <th>Velocity (m/s)</th>
+                <th>Pressure (Bar)</th>
+                <th>TDH (m)</th>
+                <th>Power (kW)</th>
+              </tr></thead>
+              <tbody>
+          `;
+          pump.pipeEvals.forEach(p => {
+            const velClass = (p.velocity > 3 || p.velocity < 1) && p.isPressureSafe ? 'warn' : '';
+            const pressClass = p.isPressureSafe ? '' : 'danger';
+            const isRecommended = p === pump.recommendedPipe;
+            html += `
+              <tr ${isRecommended ? 'style="background:#f0fdf4"' : ''}>
+                <td><strong>${p.pipeName}</strong></td>
+                <td><span class="status-badge ${p.statusClass}">${p.status}</span></td>
+                <td class="${velClass}">${format(p.velocity,2)}</td>
+                <td class="${pressClass}"><strong>${format(p.pressure_bar,2)}</strong></td>
+                <td>${format(p.TDH,2)}</td>
+                <td>${format(p.powerKW,1)}</td>
+              </tr>`;
+          });
+          html += `</tbody></table></div></div>`;
+        });
+      }
+
+      // POIN 3 (BARU): Tambahkan kesimpulan dan saran
+      html += `<h3 style="font-size: 18px; margin-top:24px; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">Kesimpulan & Saran</h3>`;
+      html += `<div classid="finalSummary" style="font-size: 14px; line-height: 1.6;"><ul>`;
+
+      if (bestOverall && bestOverall.bestPipe.score >= 0) {
+          html += `<li><strong>Rekomendasi Utama:</strong> Gunakan <strong>${bestOverall.numPumps} unit pompa</strong> dengan pipa <strong>${bestOverall.recommendedPipe}</strong>. Konfigurasi ini paling efisien (Total Power: ${format(bestOverall.totalPower,1)} kW) dan aman.</li>`;
+      } else if (qPumpTotal_m3h > 0) {
+          html += `<li><strong class="danger">PERINGATAN UTAMA:</strong> Tidak ada rekomendasi sistem yang aman. Tekanan sistem melebihi PN Pipa (${format(pnPipa_bar, 1)} Bar). Harap tinjau ulang desain Anda (perbesar PN, perpendek pipa, atau tambah jumlah unit pompa).</li>`;
+      } else {
+           html += `<li><strong>Rekomendasi Utama:</strong> Tidak diperlukan pompa karena total flow yang dibutuhkan adalah 0 m³/jam.</li>`;
+      }
+
+      if (npshStatus === 'AMAN') {
+          html += `<li><strong>Status NPSH:</strong> <span class="good">AMAN</span> (Margin: ${format(npshMargin, 2)} m). Tidak ada risiko kavitasi yang teridentifikasi.</li>`;
+      } else {
+          html += `<li><strong>Status NPSH:</strong> <span class="${npshClass}">${npshStatus}</span> (Margin: ${format(npshMargin, 2)} m). Harap perhatikan: <span class="danger">Risiko kavitasi!</span> Pertimbangkan untuk menurunkan level suction atau gunakan pompa dengan NPSHr lebih rendah.</li>`;
+      }
+
+      if (planningAnalysis) {
+          if (planningAnalysis.hasUnsafePipe) {
+               html += `<li><strong>Analisis Planning:</strong> <span class="danger">PERINGATAN!</span> Rencana Anda menggunakan pipa yang tidak aman (melebihi PN Pipa). Jangan dilanjutkan.</li>`;
+          } else if (planningAnalysis.planningStatus === 'good') {
+               html += `<li><strong>Analisis Planning:</strong> Rencana Anda <span class="good">dapat berjalan baik</span> dan memenuhi target.</li>`;
+          } else if (planningAnalysis.planningStatus === 'warn') {
+               html += `<li><strong>Analisis Planning:</strong> Rencana Anda dapat berjalan, namun <span class="warn">akan lebih lambat dari target</span>.</li>`;
+          } else {
+               html += `<li><strong>Analisis Planning:</strong> <span class="danger">Rencana Anda tidak mencukupi</span> untuk mengatasi total inflow.</li>`;
+          }
+      }
+      
+      html += `<li><strong>Saran Tambahan:</strong> Selalu sediakan 1 unit pompa sebagai cadangan (standby) dan pastikan *rated power* motor pompa memiliki *service factor* (SF) yang cukup (minimal 10-15% di atas Power/unit yang dihitung).</li>`;
+      html += `</ul></div>`;
+
+
+      // Tombol Ekspor
+      html += `<button id="exportBtn" onclick="exportToPDF()">Ekspor ke PDF</button>`;
+      out.innerHTML = html;
+    });
+
+    // POIN 2 (PERBAIKAN): Fungsi PDF dengan error handling lebih baik
+    function addWatermark(doc) {
+      // ... (Fungsi watermark - sama seperti v8) ...
+      const pageCount = doc.internal.getNumberOfPages();
+      const { width, height } = doc.internal.pageSize;
+      doc.setFontSize(40);
+      doc.setTextColor(230, 230, 230);
+      doc.setGState(new doc.GState({opacity: 0.5}));
+      for(let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.text('Calculated with DrainMaster', width / 2, height / 2, {
+          align: 'center', angle: -45, baseline: 'middle'
+        });
+      }
+      doc.setGState(new doc.GState({opacity: 1}));
+      doc.setTextColor(30, 30, 30);
+      doc.setFontSize(10);
+    }
+    
+    function exportToPDF() {
+      const exportButton = document.getElementById('exportBtn');
+      if (exportButton) exportButton.style.display = 'none';
+
+      try {
+          // Cek library utama
+          if (typeof window.jspdf === 'undefined') {
+              console.error("jsPDF (utama) not loaded!");
+              alert("Gagal memuat library PDF (jspdf). Periksa koneksi internet Anda atau coba muat ulang halaman.");
+              if (exportButton) exportButton.style.display = 'block';
+              return;
+          }
+
+          const { jsPDF } = window.jspdf;
+          const autoTable = window.jspdf.autoTable;
+
+          // Cek plugin autoTable
+          if (!autoTable) {
+              console.error("jsPDF-AutoTable (plugin) not loaded!");
+              alert("Gagal memuat modul tabel PDF (autoTable). Periksa koneksi internet Anda atau coba muat ulang halaman.");
+              if (exportButton) exportButton.style.display = 'block';
+              return;
+          }
+
+          const doc = new jsPDF({
+            orientation: 'p', unit: 'mm', format: 'a4'
+          });
+          
+          const sumpName = document.getElementById('sumpName').value || 'Area Tidak Bernama';
+          let startY = 35; 
+
+          // --- 1. Header PDF ---
+          doc.setFontSize(18);
+          doc.setFont('helvetica', 'bold');
+          doc.text('Laporan Perhitungan DrainMaster', 14, 20);
+          doc.setFontSize(12);
+          doc.setFont('helvetica', 'normal');
+          doc.text(`Area: ${sumpName}`, 14, 28);
+          doc.text(`Tanggal: ${new Date().toLocaleString('id-ID')}`, 14, 34);
+          startY = 42;
+
+          // --- 2. Ringkasan Perhitungan ---
+          const summaryTable = document.getElementById('summaryTable');
+          if (summaryTable) {
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Ringkasan Perhitungan', 14, startY);
+            startY += 6;
+            autoTable(doc, {
+              html: '#summaryTable', startY: startY, theme: 'grid',
+              headStyles: { fillColor: [248, 250, 252], textColor: [15, 23, 42], fontStyle: 'bold' },
+              didParseCell: (data) => {
+                if (data.cell.raw && data.cell.raw.tagName === 'STRONG') {
+                    data.cell.styles.fontStyle = 'bold';
+                }
+              }
+            });
+            startY = doc.autoTable.previous.finalY + 10;
+          }
+          
+          // --- 3. Perbandingan (jika ada) ---
+          const compareTable = document.getElementById('compareTable');
+          if (compareTable) {
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Perbandingan Planning vs. Rekomendasi', 14, startY);
+            startY += 6;
+            autoTable(doc, {
+              html: '#compareTable', startY: startY, theme: 'grid',
+              headStyles: { fillColor: [254, 252, 232], textColor: [146, 64, 14], fontStyle: 'bold' },
+            });
+            startY = doc.autoTable.previous.finalY + 10;
+          }
+
+          // --- 4. Detail Rekomendasi Sistem ---
+          const recDetailTable = document.getElementById('recommendationDetailTable');
+          if (recDetailTable) {
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Detail Rekomendasi Sistem', 14, startY);
+            startY += 6;
+            autoTable(doc, {
+              html: '#recommendationDetailTable', startY: startY, theme: 'grid',
+              headStyles: { fillColor: [248, 250, 252], textColor: [15, 23, 42], fontStyle: 'bold' },
+            });
+            startY = doc.autoTable.previous.finalY + 10;
+          }
+          
+          // --- 5. Detail Planning Pompa (Loop) ---
+          const planningPumpCount = parseInt(document.getElementById('planningPumpCount').value) || 0;
+          if (planningPumpCount > 0) {
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Detail Planning Pompa', 14, startY);
+            startY += 6;
+            for (let i = 1; i <= planningPumpCount; i++) {
+              const planningTable = document.getElementById(`planningDetailTable_${i}`);
+              const flow = document.getElementById(`planningFlow${i}`)?.value || 'N/A';
+              if (planningTable) {
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text(`Pompa ${i} - Flow: ${flow} m³/jam`, 14, startY);
+                startY += 6;
+                autoTable(doc, {
+                  html: `#planningDetailTable_${i}`, startY: startY, theme: 'grid',
+                  headStyles: { fillColor: [248, 250, 252], textColor: [15, 23, 42], fontStyle: 'bold' },
+                });
+                startY = doc.autoTable.previous.finalY + 8;
+              }
+            }
+          }
+
+          // --- 6. Watermark & Simpan ---
+          addWatermark(doc);
+          doc.save(`DrainMaster_Report_${sumpName.replace(/ /g, '_')}.pdf`);
+
+      } catch (e) {
+          console.error("Error creating PDF:", e);
+          alert("Terjadi kesalahan saat membuat PDF: " + e.message);
+      } finally {
+          if (exportButton) exportButton.style.display = 'block';
+      }
+    }
+
+    document.getElementById('resetBtn').addEventListener('click', ()=> {
+        location.reload();
+    });
+  </script>
+</body>
+</html>
+
